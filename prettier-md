@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# prettier-md — run prettier on markdown files using ~/prettierrc
+# Usage: prettier-md <file> [file ...]
+#        prettier-md --write <file>   (passthrough to prettier)
+exec prettier --config "$HOME/.prettierrc" --write "$@"
