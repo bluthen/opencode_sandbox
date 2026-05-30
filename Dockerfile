@@ -7,12 +7,21 @@ ARG UID=1000
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
       curl \
+      wget \
+      rustc \
+      cargo \
+      openjdk-11-jdk \
+      jq \
+      openssh-client \
       git \
       build-essential \
+      zip \
       unzip \
       sudo \
       gnupg \
       lsb-release \
+      graphviz \
+      python3-full \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Docker CLI + Compose plugin ────────────────────────────────────────────────
