@@ -7,11 +7,13 @@ IMAGE="opencode-sandbox:latest"
 
 # ── Parse opencode-sandbox flags (before passing remainder to opencode) ────────
 ISOLATE_VENV=true
+CONFIG_SUFFIX=""
 PASSTHROUGH_ARGS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --isolate-venv)    ISOLATE_VENV=true;  shift ;;
     --no-isolate-venv) ISOLATE_VENV=false; shift ;;
+    --config-suffix=*) CONFIG_SUFFIX="${1#--config-suffix=}"; shift ;;
     --update)
       echo "[opencode-sandbox] Rebuilding image '$IMAGE' (--no-cache)..."
       docker build --no-cache \
@@ -35,6 +37,11 @@ while [[ $# -gt 0 ]]; do
     *)  PASSTHROUGH_ARGS+=("$1"); shift ;;
   esac
 done
+
+# ── Compute config paths (affected by --config-suffix) ────────────────────────
+OPENCODE_CONFIG_DIR="$HOME/.config/opencode${CONFIG_SUFFIX:+-$CONFIG_SUFFIX}"
+OPENCODE_SHARE_DIR="$HOME/.local/share/opencode${CONFIG_SUFFIX:+-$CONFIG_SUFFIX}"
+SANDBOX_ENV_FILE="$HOME/.config/opencode-sandbox${CONFIG_SUFFIX:+-$CONFIG_SUFFIX}/.env"
 
 # ── Sanity checks ──────────────────────────────────────────────────────────────
 if [[ "$PWD" == *:* ]] || [[ "$HOME" == *:* ]]; then
@@ -92,13 +99,12 @@ RUN_ARGS=(
   "--interactive"
   "--add-host" "host.docker.internal:host-gateway"
   "--volume" "$PWD:/workspace"
-  "--volume" "$HOME/.config/opencode:/home/coder/.config/opencode:ro"
-  "--volume" "$HOME/.local/share/opencode:/home/coder/.local/share/opencode"
+  "--volume" "$OPENCODE_CONFIG_DIR:/home/coder/.config/opencode:ro"
+  "--volume" "$OPENCODE_SHARE_DIR:/home/coder/.local/share/opencode"
   "--workdir" "/workspace"
 )
 
 # ── Inject vars from ~/.config/opencode-sandbox/.env (if present) ─────────────
-SANDBOX_ENV_FILE="$HOME/.config/opencode-sandbox/.env"
 if [[ -f "$SANDBOX_ENV_FILE" ]]; then
   while IFS= read -r _line || [[ -n "$_line" ]]; do
     # strip Windows line endings
