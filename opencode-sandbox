@@ -17,6 +17,9 @@ while [[ $# -gt 0 ]]; do
       CONFIG_SUFFIX="${1#--config-suffix=}"
       [[ "$CONFIG_SUFFIX" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "[opencode-sandbox] Error: --config-suffix must contain only letters, digits, dashes, and underscores." >&2; exit 1; }
       shift ;;
+    --config-suffix)
+      echo "[opencode-sandbox] Error: use --config-suffix=<suffix>, not --config-suffix <suffix>." >&2
+      exit 1 ;;
     --update)
       echo "[opencode-sandbox] Rebuilding image '$IMAGE' (--no-cache)..."
       docker build --no-cache \
@@ -107,7 +110,7 @@ RUN_ARGS=(
   "--workdir" "/workspace"
 )
 
-# ── Inject vars from ~/.config/opencode-sandbox/.env (if present) ─────────────
+# ── Inject vars from $SANDBOX_ENV_FILE (if present) ───────────────────────────
 if [[ -f "$SANDBOX_ENV_FILE" ]]; then
   while IFS= read -r _line || [[ -n "$_line" ]]; do
     # strip Windows line endings
