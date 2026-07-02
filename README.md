@@ -79,7 +79,7 @@ Windows-style (CRLF) line endings are handled automatically.
 **Limitations to be aware of:**
 
 - Inline comments are **not** stripped. `KEY=value # comment` passes the value `value # comment` to the container.
-- Leading and trailing whitespace in unquoted values is **not** trimmed. `KEY= value ` passes `value` (with the
+- Leading and trailing whitespace in unquoted values is **not** trimmed. `KEY= value ` passes ` value ` (with the
   surrounding spaces).
 - Keys must be valid shell identifiers (`[A-Za-z_][A-Za-z0-9_]*`). Lines with invalid keys (e.g. `1KEY=val` or
   `MY-KEY=val`) are **silently skipped**.
