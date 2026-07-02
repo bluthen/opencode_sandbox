@@ -13,7 +13,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --isolate-venv)    ISOLATE_VENV=true;  shift ;;
     --no-isolate-venv) ISOLATE_VENV=false; shift ;;
-    --config-suffix=*) CONFIG_SUFFIX="${1#--config-suffix=}"; shift ;;
+    --config-suffix=*)
+      CONFIG_SUFFIX="${1#--config-suffix=}"
+      [[ "$CONFIG_SUFFIX" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "[opencode-sandbox] Error: --config-suffix must contain only letters, digits, dashes, and underscores." >&2; exit 1; }
+      shift ;;
     --update)
       echo "[opencode-sandbox] Rebuilding image '$IMAGE' (--no-cache)..."
       docker build --no-cache \
