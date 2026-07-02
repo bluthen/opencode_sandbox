@@ -43,11 +43,12 @@ The script will auto-build the image if it's not already present.
 
 ## How it works
 
-| Mount                                                 | Purpose                                |
-| ----------------------------------------------------- | -------------------------------------- |
-| `$PWD` → `/workspace`                                 | Your project (read-write)              |
-| `~/.config/opencode` → `/home/coder/.config/opencode` | OpenCode config & API keys (read-only) |
-| `/var/run/docker.sock`                                | Host Docker daemon access              |
+| Mount                                                           | Purpose                                |
+| --------------------------------------------------------------- | -------------------------------------- |
+| `$PWD` → `/workspace`                                           | Your project (read-write)              |
+| `~/.config/opencode` → `/home/coder/.config/opencode`           | OpenCode config & API keys (read-only) |
+| `~/.local/share/opencode` → `/home/coder/.local/share/opencode` | OpenCode data directory (read-write)   |
+| `/var/run/docker.sock`                                          | Host Docker daemon access              |
 
 The container runs as a non-root user (`coder`) with the same UID as your host user, so files created inside the
 container are owned by you.
@@ -79,7 +80,7 @@ Windows-style (CRLF) line endings are handled automatically.
 **Limitations to be aware of:**
 
 - Inline comments are **not** stripped. `KEY=value # comment` passes the value `value # comment` to the container.
-- Leading and trailing whitespace in unquoted values is **not** trimmed. `KEY= value ` passes ` value ` (with the
+- Leading and trailing whitespace in unquoted values is **not** trimmed. `KEY= value ` passes `value` (with the
   surrounding spaces).
 - Keys must be valid shell identifiers (`[A-Za-z_][A-Za-z0-9_]*`). Lines with invalid keys (e.g. `1KEY=val` or
   `MY-KEY=val`) are **silently skipped**.
@@ -125,6 +126,9 @@ Omit the flag to use the default directories (`~/.config/opencode`, `~/.local/sh
 `~/.config/opencode-sandbox/.env`).
 
 The suffix must contain only letters, digits, dashes, and underscores (`[a-zA-Z0-9_-]`).
+
+**Note:** The host directories must exist before the first run — opencode-sandbox will not create them. Run
+`mkdir -p ~/.config/opencode-<suffix> ~/.local/share/opencode-<suffix>` before using the flag.
 
 ### `--update`
 
