@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       lsb-release \
       graphviz \
       python3-full \
+      ripgrep \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Docker CLI + Compose plugin ────────────────────────────────────────────────
