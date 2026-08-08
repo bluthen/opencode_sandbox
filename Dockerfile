@@ -41,6 +41,25 @@ RUN install -m 0755 -d /etc/apt/keyrings \
          docker-compose-plugin \
     && rm -rf /var/lib/apt/lists/*
 
+# ── Google Chrome (stable) ─────────────────────────────────────────────────────
+# chrome-devtools-mcp officially requires Google Chrome stable; it uses
+# puppeteer-core (no bundled Chromium download), so the system Chrome must be
+# present. The google-chrome-stable package also pulls in all required shared
+# libraries (libnss3, libatk, libgbm1, libasound2t64, ...) as dependencies.
+RUN install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL https://dl-ssl.google.com/linux/linux_signing_key.pub \
+         | gpg --dearmor -o /etc/apt/keyrings/google-chrome.gpg \
+    && chmod a+r /etc/apt/keyrings/google-chrome.gpg \
+    && echo \
+         "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] \
+         https://dl.google.com/linux/chrome/deb/ \
+         stable main" \
+         > /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+         google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
+
 # ── Non-root user ──────────────────────────────────────────────────────────────
 RUN userdel -r ubuntu 2>/dev/null || true \
     && useradd -m -u ${UID} -s /bin/bash coder \
@@ -74,5 +93,10 @@ RUN /home/coder/.volta/bin/npm install -g prettier
 COPY --chown=coder:coder .prettierrc /home/coder/.prettierrc
 # Wrapper so prettier always uses ~/prettierrc regardless of working directory
 COPY --chmod=755 --chown=coder:coder prettier-md /home/coder/.local/bin/prettier-md
+
+# ── chrome-devtools-mcp ───────────────────────────────────────────────────────
+# Provides the `chrome-devtools-mcp` MCP server binary on PATH. Uses the system
+# google-chrome-stable installed above (no Puppeteer Chromium download).
+RUN /home/coder/.volta/bin/npm install -g chrome-devtools-mcp
 
 WORKDIR /workspace
