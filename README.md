@@ -45,10 +45,16 @@ The script will auto-build the image if it's not already present.
 
 | Mount                                                           | Purpose                                |
 | --------------------------------------------------------------- | -------------------------------------- |
-| `$PWD` → `/workspace`                                           | Your project (read-write)              |
+| `$PWD` → `/workspace-<name>-<hash>`                             | Your project (read-write)              |
 | `~/.config/opencode` → `/home/coder/.config/opencode`           | OpenCode config & API keys (read-only) |
 | `~/.local/share/opencode` → `/home/coder/.local/share/opencode` | OpenCode data directory (read-write)   |
 | `/var/run/docker.sock`                                          | Host Docker daemon access              |
+
+Each project is mounted at a unique path (`/workspace-<sanitized-basename-of-your-project-dir>-<hash-of-its-full-path>`)
+rather than a fixed `/workspace`. OpenCode identifies a "project" by the literal working directory path it sees, so
+without this, every project you ever open with `opencode-sandbox` would look like the same project to OpenCode and share
+one merged session/message/todo history in `~/.local/share/opencode/opencode.db`. The dynamic path is symlink-resolved
+(`pwd -P`), so the same project hashes identically regardless of which path you `cd` into it from.
 
 The container runs as a non-root user (`coder`) with the same UID as your host user, so files created inside the
 container are owned by you.
@@ -95,7 +101,7 @@ restarts and accumulate over time. To clean them up (substitute `podman` for `do
 docker volume ls | grep opencode-venv-
 
 # Remove the venv volume for the current project
-docker volume rm "opencode-venv-$(echo "$PWD" | sha256sum | cut -c1-12)"
+docker volume rm "opencode-venv-$(pwd -P | sha256sum | cut -c1-12)"
 
 # Remove all project venv volumes
 docker volume ls -q | grep opencode-venv- | xargs -r docker volume rm
