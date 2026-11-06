@@ -86,7 +86,7 @@ RUN curl -fsSL https://get.volta.sh | bash \
     && /home/coder/.volta/bin/volta install node@lts
 
 # ── OpenCode ──────────────────────────────────────────────────────────────────
-RUN curl -fsSL https://opencode.ai/install | bash -s -- --no-modify-path
+RUN curl -fsSL https://opencode.ai/v2/install | bash
 
 # ── Prettier (markdown formatter) ─────────────────────────────────────────────
 RUN /home/coder/.volta/bin/npm install -g prettier
