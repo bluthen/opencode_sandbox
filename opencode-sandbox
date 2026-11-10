@@ -74,6 +74,9 @@ OPENCODE_CONFIG_DIR="$HOME/.config/opencode${CONFIG_SUFFIX:+-$CONFIG_SUFFIX}"
 OPENCODE_SHARE_DIR="$HOME/.local/share/opencode${CONFIG_SUFFIX:+-$CONFIG_SUFFIX}"
 SANDBOX_ENV_FILE="$HOME/.config/opencode-sandbox${CONFIG_SUFFIX:+-$CONFIG_SUFFIX}/.env"
 
+# Ensure host directories exist so Docker daemon does not auto-create them as root
+mkdir -p "$OPENCODE_CONFIG_DIR" "$OPENCODE_SHARE_DIR"
+
 # ── Build image if not present ─────────────────────────────────────────────────
 if ! docker image inspect "$IMAGE" > /dev/null 2>&1; then
   echo "[opencode-sandbox] Image '$IMAGE' not found. Building..."
@@ -124,7 +127,7 @@ RUN_ARGS=(
   "--interactive"
   "--add-host" "host.docker.internal:host-gateway"
   "--volume" "$REAL_PWD:$WORKSPACE_DIR"
-  "--volume" "$OPENCODE_CONFIG_DIR:/home/coder/.config/opencode:ro"
+  "--volume" "$OPENCODE_CONFIG_DIR:/home/coder/.config/opencode-ro:ro"
   "--volume" "$OPENCODE_SHARE_DIR:/home/coder/.local/share/opencode"
   "--workdir" "$WORKSPACE_DIR"
 )
@@ -178,4 +181,11 @@ elif [[ -n "${DOCKER_HOST:-}" ]]; then
 fi
 
 # ── Run ────────────────────────────────────────────────────────────────────────
-exec docker run "${RUN_ARGS[@]}" "$IMAGE" opencode "${PASSTHROUGH_ARGS[@]}"
+exec docker run "${RUN_ARGS[@]}" "$IMAGE" bash -c '
+  mkdir -p /home/coder/.config/opencode
+  if [[ -d /home/coder/.config/opencode-ro ]]; then
+    cp -a /home/coder/.config/opencode-ro/. /home/coder/.config/opencode/ 2>/dev/null || true
+    chmod -R u+w /home/coder/.config/opencode 2>/dev/null || true
+  fi
+  exec opencode "$@"
+' -- "${PASSTHROUGH_ARGS[@]}"
