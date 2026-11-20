@@ -14,6 +14,8 @@ much better security I recommend [clampdown](https://github.com/89luca89/clampdo
 - Python 3 + [uv](https://github.com/astral-sh/uv)
 - [Volta](https://volta.sh) + Node LTS
 - Docker CLI + Compose plugin (via host Docker socket)
+- Google Chrome + `chrome-devtools-mcp`
+- Mozilla Firefox + `@mozilla/firefox-devtools-mcp` (official `.deb` build)
 - [OpenCode](https://opencode.ai) (latest stable)
 
 ## Setup
@@ -100,10 +102,10 @@ restarts and accumulate over time. To clean them up (substitute `podman` for `do
 # List all project venv volumes
 docker volume ls | grep opencode-venv-
 
-# Remove the venv volume for the current project
+# Remove the venv volume for the current project (use `shasum -a 256` on macOS)
 docker volume rm "opencode-venv-$(pwd -P | sha256sum | cut -c1-12)"
 
-# Remove all project venv volumes
+# Remove all project venv volumes (drop `-r` on macOS)
 docker volume ls -q | grep opencode-venv- | xargs -r docker volume rm
 ```
 

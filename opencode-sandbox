@@ -2,7 +2,13 @@
 set -euo pipefail
 
 # ── Locate this script's directory (where the Dockerfile lives) ────────────────
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_src="${BASH_SOURCE[0]}"
+while [[ -L "$_src" ]]; do
+  _dir="$(cd -P "$(dirname "$_src")" && pwd)"
+  _src="$(readlink "$_src")"
+  [[ "$_src" != /* ]] && _src="$_dir/$_src"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$_src")" && pwd)"
 IMAGE="opencode-sandbox:latest"
 
 # ── Sanity checks ──────────────────────────────────────────────────────────────
@@ -20,8 +26,12 @@ if [[ "$REAL_PWD" == *:* ]]; then
   echo "[opencode-sandbox] Error: resolved project path '$REAL_PWD' contains a colon, which breaks Docker/Podman bind-mount volume syntax." >&2
   exit 1
 fi
-PROJECT_HASH="$(echo "$REAL_PWD" | sha256sum | cut -c1-12)"
-PROJECT_BASENAME="$(basename "$REAL_PWD" | tr -c 'a-zA-Z0-9_-' '-')"
+if command -v sha256sum >/dev/null 2>&1; then
+  PROJECT_HASH="$(echo "$REAL_PWD" | sha256sum | cut -c1-12)"
+else
+  PROJECT_HASH="$(echo "$REAL_PWD" | shasum -a 256 | cut -c1-12)"
+fi
+PROJECT_BASENAME="$(basename "$REAL_PWD" | LC_ALL=C tr -c 'a-zA-Z0-9_-' '-')"
 [[ -z "$PROJECT_BASENAME" || "$PROJECT_BASENAME" == "-" ]] && PROJECT_BASENAME="project"
 
 # Each project gets a uniquely-named container mount point (rather than a fixed
@@ -88,6 +98,10 @@ if ! docker image inspect "$IMAGE" > /dev/null 2>&1; then
 fi
 
 # ── Detect docker socket / DOCKER_HOST ────────────────────────────────────────
+get_file_gid() {
+  stat -c '%g' "$1" 2>/dev/null || stat -f '%g' "$1"
+}
+
 DOCKER_SOCK=""
 DOCKER_GID=""
 if [[ "${DOCKER_HOST:-}" == unix://* ]]; then
@@ -97,7 +111,7 @@ if [[ "${DOCKER_HOST:-}" == unix://* ]]; then
     echo "[opencode-sandbox] Warning: $DOCKER_SOCK (from DOCKER_HOST) not found. Docker commands inside container will not work." >&2
     DOCKER_SOCK=""
   else
-    DOCKER_GID=$(stat -c '%g' "$DOCKER_SOCK")
+    DOCKER_GID=$(get_file_gid "$DOCKER_SOCK")
   fi
 elif [[ -z "${DOCKER_HOST:-}" ]]; then
   # No DOCKER_HOST set — fall back to default socket
@@ -106,7 +120,7 @@ elif [[ -z "${DOCKER_HOST:-}" ]]; then
     echo "[opencode-sandbox] Warning: $DOCKER_SOCK not found. Docker commands inside container will not work." >&2
     DOCKER_SOCK=""
   else
-    DOCKER_GID=$(stat -c '%g' "$DOCKER_SOCK")
+    DOCKER_GID=$(get_file_gid "$DOCKER_SOCK")
   fi
 fi
 
@@ -117,7 +131,7 @@ fi
 IS_PODMAN=false
 if docker --version 2>/dev/null | grep -qi podman; then
   IS_PODMAN=true
-elif [[ "$(readlink -f "$(command -v docker)" 2>/dev/null)" == *podman* ]]; then
+elif [[ "$(readlink -f "$(command -v docker)" 2>/dev/null || true)" == *podman* ]]; then
   IS_PODMAN=true
 fi
 
@@ -188,4 +202,4 @@ exec docker run "${RUN_ARGS[@]}" "$IMAGE" bash -c '
     chmod -R u+w /home/coder/.config/opencode 2>/dev/null || true
   fi
   exec opencode "$@"
-' -- "${PASSTHROUGH_ARGS[@]}"
+' -- ${PASSTHROUGH_ARGS[@]+"${PASSTHROUGH_ARGS[@]}"}

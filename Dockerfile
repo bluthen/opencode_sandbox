@@ -51,13 +51,31 @@ RUN install -m 0755 -d /etc/apt/keyrings \
          | gpg --dearmor -o /etc/apt/keyrings/google-chrome.gpg \
     && chmod a+r /etc/apt/keyrings/google-chrome.gpg \
     && echo \
-         "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] \
+         "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/google-chrome.gpg] \
          https://dl.google.com/linux/chrome/deb/ \
          stable main" \
          > /etc/apt/sources.list.d/google-chrome.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
          google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Mozilla Firefox (official APT repo, avoids Ubuntu Snap stub) ───────────────
+# Ubuntu 24.04's default `firefox` package is a Snap wrapper that fails inside
+# Docker. Installing from Mozilla's APT repository provides native amd64/arm64
+# .deb builds for @mozilla/firefox-devtools-mcp.
+RUN install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL https://packages.mozilla.org/apt/repo-signing-key.gpg \
+         | gpg --dearmor -o /etc/apt/keyrings/packages.mozilla.org.gpg \
+    && chmod a+r /etc/apt/keyrings/packages.mozilla.org.gpg \
+    && printf "Types: deb\nURIs: https://packages.mozilla.org/apt\nSuites: mozilla\nComponents: main\nSigned-By: /etc/apt/keyrings/packages.mozilla.org.gpg\n" \
+         > /etc/apt/sources.list.d/mozilla.sources \
+    && printf "Package: *\nPin: origin packages.mozilla.org\nPin-Priority: 1000\n" \
+         > /etc/apt/preferences.d/mozilla \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+         firefox \
+         dbus-x11 \
     && rm -rf /var/lib/apt/lists/*
 
 # ── OpenTofu ──────────────────────────────────────────────────────────────────
@@ -110,9 +128,9 @@ COPY --chown=coder:coder .prettierrc /home/coder/.prettierrc
 # Wrapper so prettier always uses ~/prettierrc regardless of working directory
 COPY --chmod=755 --chown=coder:coder prettier-md /home/coder/.local/bin/prettier-md
 
-# ── chrome-devtools-mcp ───────────────────────────────────────────────────────
-# Provides the `chrome-devtools-mcp` MCP server binary on PATH. Uses the system
-# google-chrome-stable installed above (no Puppeteer Chromium download).
-RUN /home/coder/.volta/bin/npm install -g chrome-devtools-mcp
+# ── chrome-devtools-mcp & firefox-devtools-mcp ────────────────────────────────
+# Provides the `chrome-devtools-mcp` and `firefox-devtools-mcp` MCP server
+# binaries on PATH, using the system Google Chrome and Firefox installed above.
+RUN /home/coder/.volta/bin/npm install -g chrome-devtools-mcp @mozilla/firefox-devtools-mcp
 
 WORKDIR /workspace
